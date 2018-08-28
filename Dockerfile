@@ -3,7 +3,7 @@ MAINTAINER "Vadim Isaev" <vadim.o.isaev@gmail.com>
 
 # some useful envs
 
-ENV CONFIG_DIR ${PAYARA_PATH}/glassfish/domains/${PAYARA_DOMAIN}/config
+ENV PAYARA_CONFIG_PATH ${PAYARA_PATH}/glassfish/domains/${PAYARA_DOMAIN}/config
 ENV PASSWORD_FILE /opt/pwdfile
 
 # fix pwdfile error
@@ -28,20 +28,24 @@ ADD --chown=payara http://central.maven.org/maven2/org/mariadb/jdbc/mariadb-java
 
 # defines config dir
 
-ENV CONFIG_VOLUME ${PAYARA_PATH}/config
+ENV PAYARA_CONFIG_VOLUME ${PAYARA_PATH}/glassfish/domains/${PAYARA_DOMAIN}/docker-config
 
 # redefines file realm and move file to volume
 
-RUN mkdir -p ${CONFIG_VOLUME} && \ 
-    touch ${CONFIG_VOLUME}/file-realm && \
+RUN mkdir -p ${PAYARA_CONFIG_VOLUME} && \ 
+    touch ${PAYARA_CONFIG_VOLUME}/file-realm && \
     ${PAYARA_PATH}/bin/asadmin start-domain ${PAYARA_DOMAIN} && \
     ${PAYARA_PATH}/bin/asadmin --user ${ADMIN_USER} --passwordfile=${PASSWORD_FILE} \
         delete-auth-realm file && \
     ${PAYARA_PATH}/bin/asadmin --user ${ADMIN_USER} --passwordfile=${PASSWORD_FILE} \
-        create-auth-realm --classname com.sun.enterprise.security.auth.realm.file.FileRealm --property file=${CONFIG_VOLUME}/file-realm:jaas-context=fileRealm file && \
+        create-auth-realm --classname com.sun.enterprise.security.auth.realm.file.FileRealm --property file=${PAYARA_CONFIG_VOLUME}/file-realm:jaas-context=fileRealm file && \
     ${PAYARA_PATH}/bin/asadmin stop-domain ${PAYARA_DOMAIN} && \
     rm -rf ${PAYARA_PATH}/glassfish/domains/${PAYARA_DOMAIN}/osgi-cache \
            ${PAYARA_PATH}/glassfish/domains/${PAYARA_DOMAIN}/logs/server.log
 
-VOLUME ${CONFIG_VOLUME}
+VOLUME ${PAYARA_CONFIG_VOLUME}
 
+COPY --chown=payara first-start.sh ./
+ENV PAYARA_RUN_ONCE_PATH ${PAYARA_PATH}/run-once
+
+ENTRYPOINT [ "/bin/sh", "-c", "${PAYARA_PATH}/first-start.sh && ${PAYARA_PATH}/generate_deploy_commands.sh && ${PAYARA_PATH}/bin/startInForeground.sh --passwordfile=/opt/pwdfile --postbootcommandfile ${POSTBOOT_COMMANDS} ${PAYARA_DOMAIN}" ]
