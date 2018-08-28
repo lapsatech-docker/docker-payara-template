@@ -44,3 +44,4 @@ RUN mkdir -p ${CONFIG_VOLUME} && \
            ${PAYARA_PATH}/glassfish/domains/${PAYARA_DOMAIN}/logs/server.log
 
 VOLUME ${CONFIG_VOLUME}
+
